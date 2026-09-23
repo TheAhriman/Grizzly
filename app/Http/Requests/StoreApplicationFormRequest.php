@@ -22,7 +22,6 @@ class StoreApplicationFormRequest extends FormRequest
         $maritalStatus = $this->input('marital_status');
 
         $this->merge([
-            'email' => $this->filled('email') ? $this->string('email')->trim()->toString() : null,
             'phones' => $phones === [] ? null : $phones,
             'marital_status' => is_string($maritalStatus) && ctype_digit($maritalStatus)
                 ? (int) $maritalStatus
