@@ -60,20 +60,32 @@
                 </div>
                 <div class="field-group"><label class="field field--date @error('birth_date') is-invalid @enderror"><span>Twoja data urodzenia</span><input type="date" name="birth_date" value="{{ old('birth_date') }}" max="{{ now()->toDateString() }}" required></label><p class="field-error" data-error-for="birth_date">@error('birth_date'){{ $message }}@enderror</p></div>
                 <div class="field-group"><label class="field @error('email') is-invalid @enderror"><span>E-mail</span><input type="email" name="email" maxlength="255" value="{{ old('email') }}"></label><p class="field-error" data-error-for="email">@error('email'){{ $message }}@enderror</p></div>
-                <div class="phone-field field-group">
+                @php
+                    $oldPhones = old('phones');
+                    $oldPhones = is_array($oldPhones) && $oldPhones !== []
+                        ? $oldPhones
+                        : [['country_code' => '', 'number' => '']];
+                @endphp
+                <div class="phone-field field-group phone-entry" data-phone-index="0">
                     <div class="phone-input">
-                        <label class="country-code @error('country_code') is-invalid @enderror"><span class="sr-only">Kod kraju</span><select name="country_code" aria-label="Kod kraju"><option value="+48" selected>+48</option></select></label>
-                        <label class="field @error('phone_numbers.0') is-invalid @enderror"><span>Telefon</span><input type="tel" name="phone_numbers[]" value="{{ old('phone_numbers.0') }}" inputmode="tel" maxlength="20"></label>
+                        <label class="country-code @error('phones.0.country_code') is-invalid @enderror"><span class="sr-only">Kod kraju</span><select name="phones[0][country_code]" aria-label="Kod kraju"><option value="">Kod</option><option value="+375" @selected(data_get($oldPhones, '0.country_code') === '+375')>+375</option><option value="+7" @selected(data_get($oldPhones, '0.country_code') === '+7')>+7</option></select></label>
+                        <label class="field @error('phones.0.number') is-invalid @enderror"><span>Telefon</span><input type="tel" name="phones[0][number]" value="{{ data_get($oldPhones, '0.number') }}" inputmode="numeric" pattern="[0-9]{9,10}" maxlength="10"></label>
                     </div>
                     <button class="add-phone" type="button"><span>Dodaj kolejny numer</span><img src="{{ asset('images/enemer/plus.svg') }}" alt=""></button>
-                    <p class="field-error" data-error-for="phone_numbers.0">@error('country_code'){{ $message }} @enderror @error('phone_numbers.0'){{ $message }}@enderror</p>
+                    <p class="field-error" data-error-for="phones.0.number">@error('phones.0.country_code'){{ $message }} @enderror @error('phones'){{ $message }} @enderror @error('phones.0.number'){{ $message }}@enderror</p>
                 </div>
                 <div class="extra-phones">
-                    @foreach (array_slice(old('phone_numbers', []), 1) as $index => $phoneNumber)
-                        <div class="field-group additional-phone"><label class="field @error('phone_numbers.'.($index + 1)) is-invalid @enderror"><span>Dodatkowy telefon</span><input type="tel" name="phone_numbers[]" value="{{ $phoneNumber }}" maxlength="20"></label><button type="button" class="remove-phone" aria-label="Usuń numer">×</button><p class="field-error">@error('phone_numbers.'.($index + 1)){{ $message }}@enderror</p></div>
+                    @foreach (array_slice($oldPhones, 1, null, true) as $index => $phone)
+                        <div class="field-group additional-phone phone-entry" data-phone-index="{{ $index }}">
+                            <div class="phone-input">
+                                <label class="country-code @error('phones.'.$index.'.country_code') is-invalid @enderror"><span class="sr-only">Kod kraju</span><select name="phones[{{ $index }}][country_code]" aria-label="Kod kraju"><option value="">Kod</option><option value="+375" @selected(data_get($phone, 'country_code') === '+375')>+375</option><option value="+7" @selected(data_get($phone, 'country_code') === '+7')>+7</option></select></label>
+                                <label class="field @error('phones.'.$index.'.number') is-invalid @enderror"><span>Dodatkowy telefon</span><input type="tel" name="phones[{{ $index }}][number]" value="{{ data_get($phone, 'number') }}" inputmode="numeric" pattern="[0-9]{9,10}" maxlength="10"></label>
+                            </div>
+                            <button type="button" class="remove-phone" aria-label="Usuń numer">×</button><p class="field-error" data-error-for="phones.{{ $index }}.number">@error('phones.'.$index.'.country_code'){{ $message }} @enderror @error('phones.'.$index.'.number'){{ $message }}@enderror</p>
+                        </div>
                     @endforeach
                 </div>
-                <div class="field-group"><label class="field select-native @error('marital_status') is-invalid @enderror"><span class="sr-only">Stan cywilny</span><select name="marital_status" required><option value="">Stan cywilny</option><option value="single" @selected(old('marital_status') === 'single')>Holost/niezamężna</option><option value="married" @selected(old('marital_status') === 'married')>Żonaty/zamężna</option><option value="divorced" @selected(old('marital_status') === 'divorced')>Rozwiedziony/rozwiedziona</option><option value="widowed" @selected(old('marital_status') === 'widowed')>Wdowiec/wdowa</option></select></label><p class="field-error" data-error-for="marital_status">@error('marital_status'){{ $message }}@enderror</p></div>
+                <div class="field-group"><label class="field select-native @error('marital_status') is-invalid @enderror"><span class="sr-only">Stan cywilny</span><select name="marital_status" required><option value="">Stan cywilny</option>@foreach (\App\MaritalStatus::cases() as $status)<option value="{{ $status->value }}" @selected(old('marital_status') === (string) $status->value)>{{ $status->label() }}</option>@endforeach</select></label><p class="field-error" data-error-for="marital_status">@error('marital_status'){{ $message }}@enderror</p></div>
                 <div class="field-group"><label class="field field--about @error('about') is-invalid @enderror"><span>O mnie</span><textarea name="about" maxlength="1000" rows="1">{{ old('about') }}</textarea></label><p class="field-error" data-error-for="about">@error('about'){{ $message }}@enderror</p></div>
                 <div class="form__footer">
                     <div><label class="check @error('accepted_rules') is-invalid @enderror"><input type="checkbox" name="accepted_rules" value="1" @checked(old('accepted_rules')) required><i></i><span>Przeczytałem zasady</span></label><p class="field-error" data-error-for="accepted_rules">@error('accepted_rules'){{ $message }}@enderror</p></div>

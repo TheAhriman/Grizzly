@@ -72,7 +72,7 @@
     .add-phone span { width: 0; overflow: hidden; opacity: 0; white-space: nowrap; font-size: 12px; transition: width .2s, opacity .2s; }
     .add-phone:hover span { width: 119px; opacity: 1; }
     .extra-phones { display: flex; flex-direction: column; gap: 14px; }
-    .additional-phone { padding-right: 28px; }
+    .additional-phone { position: relative; }
     .remove-phone { position: absolute; right: 0; top: 2px; color: white; font-size: 22px; line-height: 1; }
     .select { position: relative; }
     .select__trigger { width: 100%; height: 32px; padding-bottom: 8px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgb(255 255 255 / 50%); }

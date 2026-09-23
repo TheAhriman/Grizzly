@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\MaritalStatus;
 use App\Models\ApplicationForm;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -23,9 +24,8 @@ class ApplicationFormFactory extends Factory
             'middle_name' => null,
             'birth_date' => fake()->dateTimeBetween('-70 years', '-18 years')->format('Y-m-d'),
             'email' => fake()->safeEmail(),
-            'country_code' => null,
             'phone_numbers' => null,
-            'marital_status' => 'single',
+            'marital_status' => MaritalStatus::Single,
             'about' => fake()->text(),
             'accepted_rules' => true,
         ];

@@ -18,7 +18,6 @@ if (form) {
     const addPhoneButton = form.querySelector('.add-phone');
     const extraPhones = form.querySelector('.extra-phones');
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const phonePattern = /^[0-9\s()\-]{7,20}$/;
     const touchedFields = new Set();
 
     const errorElement = (name) => form.querySelector(`[data-error-for="${CSS.escape(name)}"]`);
@@ -33,8 +32,12 @@ if (form) {
         }
     };
 
-    const phoneInputs = () => [...form.querySelectorAll('[name="phone_numbers[]"]')];
+    const phoneInputs = () => [...form.querySelectorAll('[name^="phones["][name$="[number]"]')];
     const hasPhone = () => phoneInputs().some((input) => input.value.trim() !== '');
+    const isPhoneNumber = (input) => input.name.startsWith('phones[') && input.name.endsWith('[number]');
+    const isCountryCode = (input) => input.name.startsWith('phones[') && input.name.endsWith('[country_code]');
+    const countryCodeFor = (input) => input.closest('.phone-entry')?.querySelector('[name$="[country_code]"]')?.value ?? '';
+    const expectedPhoneLength = (input) => countryCodeFor(input) === '+375' ? 9 : countryCodeFor(input) === '+7' ? 10 : null;
 
     const validateInput = (input, showError = false) => {
         const value = input.type === 'checkbox' ? input.checked : input.value.trim();
@@ -48,11 +51,22 @@ if (form) {
         if (input.name === 'accepted_rules' && !value) message = 'Musisz zaakceptować zasady.';
         if (input.name === 'email' && value && !emailPattern.test(value)) message = 'Podaj prawidłowy adres e-mail.';
         if (input.name === 'about' && value.length > 1000) message = 'Opis nie może mieć więcej niż 1000 znaków.';
-        if (input.name === 'phone_numbers[]' && value && !phonePattern.test(value)) message = 'Podaj prawidłowy numer telefonu.';
-        if (input.name === 'country_code' && hasPhone() && !value) message = 'Wybierz kod kraju.';
+        if (isPhoneNumber(input) && value) {
+            const expectedLength = expectedPhoneLength(input);
+            if (!expectedLength || !new RegExp(`^\\d{${expectedLength}}$`).test(value)) {
+                message = expectedLength
+                    ? `Numer dla ${countryCodeFor(input)} musi zawierać dokładnie ${expectedLength} cyfr.`
+                    : 'Wybierz kod kraju i podaj prawidłowy numer telefonu.';
+            }
+        }
+        if (isPhoneNumber(input) && !value && countryCodeFor(input)) message = 'Podaj numer telefonu.';
+        if (isCountryCode(input)) {
+            const number = input.closest('.phone-entry')?.querySelector('[name$="[number]"]')?.value.trim();
+            if (number && !value) message = 'Wybierz kod kraju.';
+        }
 
         const email = form.querySelector('[name="email"]');
-        if ((input.name === 'email' || input.name === 'phone_numbers[]') && !email.value.trim() && !hasPhone()) {
+        if ((input.name === 'email' || isPhoneNumber(input)) && !email.value.trim() && !hasPhone()) {
             message = input.name === 'email' ? 'Podaj adres e-mail lub co najmniej jeden numer telefonu.' : 'Podaj numer telefonu lub adres e-mail.';
         }
 
@@ -72,7 +86,7 @@ if (form) {
         const validateTouched = () => {
             updateFilled();
             if (touchedFields.has(input)) validateInput(input, true);
-            if (input.name === 'email' || input.name === 'phone_numbers[]') {
+            if (input.name === 'email' || isPhoneNumber(input)) {
                 const email = form.querySelector('[name="email"]');
                 if (touchedFields.has(email)) validateInput(email, true);
             }
@@ -91,7 +105,7 @@ if (form) {
     allInputs().forEach(bindInput);
 
     const removePhone = (button) => {
-        button.closest('.additional-phone').remove();
+        button.closest('.phone-entry').remove();
         updateSubmit();
     };
 
@@ -100,16 +114,36 @@ if (form) {
     addPhoneButton.addEventListener('click', () => {
         if (phoneInputs().length >= 6) return;
 
+        const indexes = [...form.querySelectorAll('.phone-entry')].map((entry) => Number(entry.dataset.phoneIndex));
+        const index = Math.max(...indexes) + 1;
         const wrapper = document.createElement('div');
-        wrapper.className = 'field-group additional-phone';
-        wrapper.innerHTML = '<label class="field"><span>Dodatkowy telefon</span><input type="tel" name="phone_numbers[]" maxlength="20" inputmode="tel"></label><button type="button" class="remove-phone" aria-label="Usuń numer">×</button><p class="field-error"></p>';
-        const input = wrapper.querySelector('input');
+        wrapper.className = 'field-group additional-phone phone-entry';
+        wrapper.dataset.phoneIndex = String(index);
+        wrapper.innerHTML = `<div class="phone-input"><label class="country-code"><span class="sr-only">Kod kraju</span><select name="phones[${index}][country_code]" aria-label="Kod kraju"><option value="">Kod</option><option value="+375">+375</option><option value="+7">+7</option></select></label><label class="field"><span>Dodatkowy telefon</span><input type="tel" name="phones[${index}][number]" maxlength="10" inputmode="numeric" pattern="[0-9]{9,10}"></label></div><button type="button" class="remove-phone" aria-label="Usuń numer">×</button><p class="field-error" data-error-for="phones.${index}.number"></p>`;
+        const input = wrapper.querySelector('[name$="[number]"]');
         wrapper.querySelector('.remove-phone').addEventListener('click', (event) => removePhone(event.currentTarget));
         extraPhones.append(wrapper);
-        bindInput(input);
+        wrapper.querySelectorAll('input, select').forEach(bindInput);
         input.focus();
         updateSubmit();
     });
+
+    const updatePhoneConstraints = (entry) => {
+        const input = entry.querySelector('[name$="[number]"]');
+        const expectedLength = expectedPhoneLength(input);
+        input.maxLength = expectedLength ?? 10;
+        input.pattern = expectedLength ? `[0-9]{${expectedLength}}` : '[0-9]{9,10}';
+        if (touchedFields.has(input)) validateInput(input, true);
+    };
+
+    form.addEventListener('change', (event) => {
+        if (isCountryCode(event.target)) {
+            updatePhoneConstraints(event.target.closest('.phone-entry'));
+            updateSubmit();
+        }
+    });
+
+    form.querySelectorAll('.phone-entry').forEach(updatePhoneConstraints);
 
     form.addEventListener('keydown', (event) => {
         if (event.key === 'Enter' && event.target.tagName !== 'TEXTAREA') {
