@@ -10,9 +10,8 @@ class ApplicationFormController extends Controller
 {
     public function store(StoreApplicationFormRequest $request): RedirectResponse
     {
-        $validated = $request->validated();
         $application = $request->safe()->except(['phones']);
-        $application['phone_numbers'] = $validated['phones'] ?? null;
+        $application['phone_numbers'] = $request->validated('phones');
 
         ApplicationForm::create($application);
 
